@@ -1,0 +1,32 @@
+{
+  "name": "studio99-type-your-world",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1",
+    "build": "next build",
+    "start": "next start --hostname 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "test": "playwright test",
+    "assets": "\"/Users/apple/Applications/Blender.app/Contents/MacOS/Blender\" --background --python scripts/build-optical-keycap.py -- --samples 512 --portrait --spectral --export-web --output crystal-final-portrait",
+    "assets:bake": "\"/Users/apple/Applications/Blender.app/Contents/MacOS/Blender\" --background --python scripts/bake-keycap-lighting.py",
+    "assets:motion": "\"/Users/apple/Applications/Blender.app/Contents/MacOS/Blender\" --background --python scripts/bake-optical-motion.py -- && node scripts/package-optical-motion.mjs",
+    "qa:motion": "node scripts/capture-motion.mjs"
+  },
+  "dependencies": {
+    "@react-three/drei": "10.7.9",
+    "@react-three/fiber": "9.8.2",
+    "next": "16.4.5",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "three": "0.187.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.187.0",
+    "typescript": "^5.9.0"
+  }
+}

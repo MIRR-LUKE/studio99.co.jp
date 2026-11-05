@@ -1,0 +1,151 @@
+{
+  "version": 4,
+  "encoding": "RGBM16",
+  "columns": 2,
+  "rows": 6,
+  "bases": 11,
+  "variants": {
+    "Keycap_1_center": {
+      "revision": 4,
+      "width": 243,
+      "height": 256,
+      "gutter": 4,
+      "textureWidth": 502,
+      "textureHeight": 1584,
+      "file": "Keycap_1_center.webp",
+      "bytes": 502796
+    },
+    "Keycap_1_left": {
+      "revision": 4,
+      "width": 267,
+      "height": 256,
+      "gutter": 4,
+      "textureWidth": 550,
+      "textureHeight": 1584,
+      "file": "Keycap_1_left.webp",
+      "bytes": 510560
+    },
+    "Keycap_1_right": {
+      "revision": 4,
+      "width": 267,
+      "height": 256,
+      "gutter": 4,
+      "textureWidth": 550,
+      "textureHeight": 1584,
+      "file": "Keycap_1_right.webp",
+      "bytes": 506492
+    },
+    "Keycap_2_right": {
+      "revision": 4,
+      "width": 381,
+      "height": 256,
+      "gutter": 4,
+      "textureWidth": 778,
+      "textureHeight": 1584,
+      "file": "Keycap_2_right.webp",
+      "bytes": 619352
+    },
+    "Keycap_1_5_left": {
+      "revision": 4,
+      "width": 330,
+      "height": 256,
+      "gutter": 4,
+      "textureWidth": 676,
+      "textureHeight": 1584,
+      "file": "Keycap_1_5_left.webp",
+      "bytes": 576734
+    },
+    "Keycap_1_5_right": {
+      "revision": 4,
+      "width": 330,
+      "height": 256,
+      "gutter": 4,
+      "textureWidth": 676,
+      "textureHeight": 1584,
+      "file": "Keycap_1_5_right.webp",
+      "bytes": 609330
+    },
+    "Keycap_1_75_left": {
+      "revision": 4,
+      "width": 357,
+      "height": 256,
+      "gutter": 4,
+      "textureWidth": 730,
+      "textureHeight": 1584,
+      "file": "Keycap_1_75_left.webp",
+      "bytes": 594468
+    },
+    "Keycap_2_25_right": {
+      "revision": 4,
+      "width": 403,
+      "height": 256,
+      "gutter": 4,
+      "textureWidth": 822,
+      "textureHeight": 1584,
+      "file": "Keycap_2_25_right.webp",
+      "bytes": 615178
+    },
+    "Keycap_2_25_left": {
+      "revision": 4,
+      "width": 403,
+      "height": 256,
+      "gutter": 4,
+      "textureWidth": 822,
+      "textureHeight": 1584,
+      "file": "Keycap_2_25_left.webp",
+      "bytes": 613788
+    },
+    "Keycap_2_75_right": {
+      "revision": 4,
+      "width": 440,
+      "height": 256,
+      "gutter": 4,
+      "textureWidth": 896,
+      "textureHeight": 1584,
+      "file": "Keycap_2_75_right.webp",
+      "bytes": 641096
+    },
+    "Keycap_1_25_left": {
+      "revision": 4,
+      "width": 300,
+      "height": 256,
+      "gutter": 4,
+      "textureWidth": 616,
+      "textureHeight": 1584,
+      "file": "Keycap_1_25_left.webp",
+      "bytes": 564588
+    },
+    "Keycap_6_25_center": {
+      "revision": 4,
+      "width": 1365,
+      "height": 256,
+      "gutter": 4,
+      "textureWidth": 2746,
+      "textureHeight": 1584,
+      "file": "Keycap_6_25_center.webp",
+      "bytes": 1336836
+    },
+    "Keycap_1_25_center": {
+      "revision": 4,
+      "width": 311,
+      "height": 256,
+      "gutter": 4,
+      "textureWidth": 638,
+      "textureHeight": 1584,
+      "file": "Keycap_1_25_center.webp",
+      "bytes": 565306
+    },
+    "Keycap_1_25_right": {
+      "revision": 4,
+      "width": 300,
+      "height": 256,
+      "gutter": 4,
+      "textureWidth": 616,
+      "textureHeight": 1584,
+      "file": "Keycap_1_25_right.webp",
+      "bytes": 539784
+    }
+  },
+  "downloadBytes": 8796308,
+  "estimatedAtlasGpuBytes": 98148864
+}

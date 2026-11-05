@@ -1,0 +1,17 @@
+node_modules/
+.next/
+test-results/
+playwright-report/
+*.tsbuildinfo
+*.blend1
+.DS_Store
+.env*
+!.env.example
+
+# Regenerable Blender optical caches; source scenes and web assets are tracked.
+assets/blender/bake-cache/
+assets/blender/optical-motion/
+assets/blender/spectral-passes/
+__pycache__/
+*.pyc
+docs/qa/**/*.log

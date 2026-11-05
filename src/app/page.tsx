@@ -1,0 +1,1 @@
+export default function Home(){return <main className="sr-only"><h1>Studio99 — TYPE YOUR WORLD.</h1><p>Studio99合同会社。Creative Capital Company. Tokyo / Nagano.</p><p>Type ABOUT, WORKS or CONTACT to explore. Any other word opens an unknown world.</p></main>;}

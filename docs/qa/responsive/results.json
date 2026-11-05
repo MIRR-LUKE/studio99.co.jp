@@ -1,0 +1,98 @@
+{
+  "environment": "Desktop Chrome on Apple M1 Pro; mobile touch/viewport emulation, not a physical phone",
+  "errors": [],
+  "measurements": [
+    {
+      "width": 320,
+      "height": 568,
+      "scrollWidth": 320,
+      "editing": {
+        "experience": {
+          "x": 0,
+          "y": 0,
+          "width": 320,
+          "height": 340
+        },
+        "input": {
+          "x": 20,
+          "y": 91.796875,
+          "width": 236,
+          "height": 43
+        },
+        "scene": {
+          "x": 0,
+          "y": 200,
+          "width": 320,
+          "height": 132
+        }
+      }
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390,
+      "editing": {
+        "experience": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 460
+        },
+        "input": {
+          "x": 40,
+          "y": 101.796875,
+          "width": 266,
+          "height": 43
+        },
+        "scene": {
+          "x": 0,
+          "y": 215,
+          "width": 390,
+          "height": 229
+        }
+      },
+      "performance": {
+        "averageFps": 60.00200006666889,
+        "p95FrameMs": 16.800000000000182,
+        "drawCalls": "98",
+        "atlasCount": "14"
+      }
+    },
+    {
+      "width": 430,
+      "height": 932,
+      "scrollWidth": 430,
+      "editing": {
+        "experience": {
+          "x": 0,
+          "y": 0,
+          "width": 430,
+          "height": 460
+        },
+        "input": {
+          "x": 60,
+          "y": 101.796875,
+          "width": 266,
+          "height": 43
+        },
+        "scene": {
+          "x": 0,
+          "y": 215,
+          "width": 430,
+          "height": 229
+        }
+      }
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "scrollWidth": 1440,
+      "performance": {
+        "averageFps": 60.00400026668444,
+        "p95FrameMs": 16.700000000000728,
+        "drawCalls": "151",
+        "atlasCount": "14"
+      }
+    }
+  ]
+}
