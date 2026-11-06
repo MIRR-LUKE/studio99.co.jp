@@ -1,6 +1,25 @@
 # Studio99® — TYPE YOUR WORLD.
 
-独立したガラスの3Dキーを入力インターフェースにした、Studio99のローカル制作版です。リポジトリは [MIRR-LUKE/studio99.co.jp](https://github.com/MIRR-LUKE/studio99.co.jp)。Webサイトの公開環境へのデプロイは行っていません。
+紙のポスターと浮遊するガラスの「world」キーで構成する、Studio99のWebサイトです。リポジトリは [MIRR-LUKE/studio99.co.jp](https://github.com/MIRR-LUKE/studio99.co.jp)。2026年11月6日、ユーザーの依頼により最新版を [studio99.co.jp](https://studio99.co.jp) に公開しました。
+
+## デプロイ
+
+- Vercelプロジェクト: [Studio99 / studio99.co.jp](https://vercel.com/studio99/studio99.co.jp)
+- `main` へのpushで本番へ自動デプロイし、独自ドメインを自動割り当てします。他ブランチはPreviewの対象です。
+- 本番: https://studio99.co.jp （`www.studio99.co.jp` は本番へ308リダイレクト）
+- Vercelの既定URL: https://studio99cojp.vercel.app
+- DNSはムームーDNSで管理します。ネームサーバーは `dns01.muumuu-domain.com` / `dns02.muumuu-domain.com`。Vercel DNSへの移管はしていません。
+
+| サブドメイン | 種別 | 内容 |
+| --- | --- | --- |
+| 空欄 | A | `216.198.79.1` |
+| www | CNAME | `9a975188623550c0.vercel-dns-017.com` |
+
+上記は初回設定時にVercelが提示した値です。変更時はプロジェクトのDomains画面を確認してください。HTTPS証明書はVercelが管理します。メール用DNS・メールボックスの設定は行っていません。
+
+初回公開のソースは `1662446`（ポスター＋単体キー版）。公開前に型チェック・本番ビルド・テスト33件の成功を確認しました。一時停止中のキーボード体験のブラウザテスト8件はskipです。
+
+Vercelチームのプランは既存のHobbyのままです。有料契約の変更はしていません。[Hobbyは個人の非商用利用向け](https://vercel.com/docs/plans/hobby)のため、会社サイトの商用運用にはプラン変更が必要です。
 
 ## 起動
 
@@ -56,7 +75,7 @@ Heroは紙の灰色のポスターです。中央に「world」と刻まれた�
 
 ### コンテンツについて
 
-ユーザーの了承に基づく仮原稿です。会社名、指定されたプロジェクト名、取得済みドメイン以外の説明文・作品ビジュアルは制作プレビューです。問い合わせ先 `hello@studio99.co.jp` の実在は未確認です。フォームはメールアプリで下書きを作り、このサイトから送信しません。公開前に確定原稿と実在する問い合わせ先へ差し替え、`layout.tsx` の `robots` を調整してください。
+ユーザーの了承に基づく仮原稿を、了承のうえで公開しています。会社名、指定されたプロジェクト名、取得済みドメイン以外の説明文・作品ビジュアルは制作プレビューです。問い合わせ先 `hello@studio99.co.jp` の実在は未確認です。フォームはメールアプリで下書きを作り、このサイトから送信しません。`noindex, nofollow` を維持しています。検索公開前に確定原稿と実在する問い合わせ先へ差し替え、承認後に `layout.tsx` の `robots` を調整してください。
 
 ## BlenderとWebの光学表現
 
