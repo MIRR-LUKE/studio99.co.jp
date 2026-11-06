@@ -10,6 +10,7 @@
     "test": "playwright test",
     "assets": "\"/Users/apple/Applications/Blender.app/Contents/MacOS/Blender\" --background --python scripts/build-optical-keycap.py -- --samples 512 --portrait --spectral --export-web --output crystal-final-portrait",
     "assets:bake": "\"/Users/apple/Applications/Blender.app/Contents/MacOS/Blender\" --background --python scripts/bake-keycap-lighting.py",
+    "assets:world-key": "\"/Users/apple/Applications/Blender.app/Contents/MacOS/Blender\" --background --python scripts/render-world-key.py -- && node scripts/package-world-key.mjs",
     "assets:motion": "\"/Users/apple/Applications/Blender.app/Contents/MacOS/Blender\" --background --python scripts/bake-optical-motion.py -- && node scripts/package-optical-motion.mjs",
     "qa:motion": "node scripts/capture-motion.mjs"
   },

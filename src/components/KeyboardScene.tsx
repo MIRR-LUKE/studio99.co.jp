@@ -3,9 +3,14 @@
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { Environment, Lightformer, useGLTF, useTexture } from '@react-three/drei';
 import { Suspense, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { COMMANDS } from '@/lib/commands';
+import type { World } from '@/lib/world';
+import { screenStore } from '@/lib/screen-store';
+import ProjectionScreen from './ProjectionScreen';
+import IceDisplay from './IceDisplay';
 import * as THREE from 'three';
 import {RectAreaLightUniformsLib} from 'three/examples/jsm/lights/RectAreaLightUniformsLib.js';
-import { KEYBOARD_LAYOUT, type KeySpec } from '@/lib/keyboard-layout';
+import { KEYBOARD_LAYOUT, LOGO_CODE, type KeySpec } from '@/lib/keyboard-layout';
 import type { InputAction, InputState } from '@/lib/input-machine';
 import { DEPARTURE_SECONDS, KEY_DEPARTURE_SECONDS, advanceFloatingKeys, createFloatingKey, setFloatingAttention, smoothNoise, type FloatingKey } from '@/lib/motion';
 import {bakedLightPosition,createTransportState} from '@/lib/optical-transport';
@@ -17,27 +22,33 @@ RectAreaLightUniformsLib.init();
 const variantFor=(spec:KeySpec)=>`Keycap_${String(spec.u).replace('.','_')}_${spec.x < -3?'left':spec.x > 3?'right':'center'}`;
 const desktopOpticalNames=[...new Set(KEYBOARD_LAYOUT.map(spec=>variantFor(spec)))];
 
-type Props = { state:InputState; dispatch:React.Dispatch<InputAction>; away:boolean; sleeping:boolean; preview:string; reducedMotion:boolean; mobile:boolean; editing:boolean; onReady:()=>void; onFailure:()=>void };
+type Props = { state:InputState; dispatch:(action:InputAction)=>void; world:World; worldMode:boolean; hints:boolean; preview:string; reducedMotion:boolean; mobile:boolean; editing:boolean; eventSource:RefObject<HTMLDivElement|null>; onReady:()=>void; onFailure:()=>void };
 function useLegends() {
   return useMemo(()=>{
     const canvas=document.createElement('canvas'); canvas.width=2048;canvas.height=2048;
     const c=canvas.getContext('2d')!; c.fillStyle='#e9e8ee';c.textAlign='center';c.textBaseline='middle';
+    const draw=()=>{
+    c.clearRect(0,0,2048,2048);
     KEYBOARD_LAYOUT.forEach((key,index)=>{
       const x=(index%8)*256+128,y=Math.floor(index/8)*192+96;
       const lines=key.label.split('\n');
+      if(key.code===LOGO_CODE){c.font='500 50px "DM Sans", Arial, sans-serif';c.fillText(key.label,x,y,226);return;}
       const fontSize=lines.length>1?44:key.code.startsWith('Arrow')?95:key.code.startsWith('F')?55:key.small?39:72;
       c.font=`${key.small?'500':'400'} ${fontSize}px Arial, sans-serif`;
       lines.forEach((line,j)=>c.fillText(line,x,y+(j-(lines.length-1)/2)*58,230));
     });
+    };
+    draw();
     const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;
+    document.fonts?.load('500 50px "DM Sans"').then(()=>{draw();texture.needsUpdate=true;}).catch(()=>{});
     return texture;
   },[]);
 }
 
-function Keycap({spec,index,geometry,material,reflectionMaterial,legend,state,dispatch,preview,reducedMotion,departure,animationTime,pose,optics,lights,mobile,study,tilt}: {
+function Keycap({spec,index,geometry,material,reflectionMaterial,legend,state,dispatch,preview,reducedMotion,departure,escAnchor,animationTime,pose,optics,lights,mobile,study,tilt}: {
   spec:KeySpec;index:number;geometry:THREE.BufferGeometry;material:THREE.MeshBasicMaterial;reflectionMaterial:THREE.MeshPhysicalMaterial;legend:THREE.Texture;
   state:InputState;dispatch:Props['dispatch'];preview:string;reducedMotion:boolean;
-  departure:RefObject<number>;
+  departure:RefObject<number>;escAnchor:RefObject<THREE.Vector3|null>;
   animationTime:RefObject<number>;
   pose:FloatingKey;
   optics?:OpticalAtlas;
@@ -63,8 +74,7 @@ function Keycap({spec,index,geometry,material,reflectionMaterial,legend,state,di
   useEffect(()=>()=>labelGeometry.dispose(),[labelGeometry]);
   useFrame(({camera},delta)=>{
     if(!group.current) return;
-    if(departure.current>0)pointerInside.current=false;
-    setFloatingAttention(pose,departure.current===0&&(pointerInside.current||pressed));
+    setFloatingAttention(pose,pointerInside.current||pressed);
     const t=reducedMotion?0:animationTime.current;
     const previewIndex=preview.indexOf(spec.key.toUpperCase());
     const wave=previewIndex>=0 && Math.floor(t*6)%Math.max(preview.length,1)===previewIndex;
@@ -80,16 +90,26 @@ function Keycap({spec,index,geometry,material,reflectionMaterial,legend,state,di
       elastic.current.rotation.x=.022*compression+s.twist*.45;
       elastic.current.rotation.z=motion.turn*.014*compression+s.twist;
     }
+    // A world clears the stage: every key leaves on its own path and timing,
+    // except ESC, which comes forward to wait beside the ice as the way home.
     const progress=THREE.MathUtils.clamp((departure.current-motion.delay)/KEY_DEPARTURE_SECONDS,0,1);
     const exit=progress*progress*(3-2*progress);
-    // Independent paths, with a small variation in depth and departure time.
-    const directionX=spec.x/8+motion.turn*.3;
-    const directionY=-spec.z/3.3+motion.lift*.3;
-    const length=Math.hypot(directionX,directionY)||1;
-    const nx=directionX/length,ny=directionY/length;
-    const x=pose.x+nx*27*exit;
-    const y=pose.y+(ny*19+motion.lift*2)*exit;
-    const z=pose.z+(-ny*9-4)*exit;
+    const anchor=spec.code==='Escape'?escAnchor.current:null;
+    let x:number,y:number,z:number,rx=pose.rx+tilt,ry=pose.ry,rz=pose.rz,size=1;
+    if(anchor){
+      const k=THREE.MathUtils.smoothstep(departure.current/DEPARTURE_SECONDS,0,1);
+      x=THREE.MathUtils.lerp(pose.x,anchor.x,k);y=THREE.MathUtils.lerp(pose.y,anchor.y,k);z=THREE.MathUtils.lerp(pose.z,anchor.z,k);
+      rx=THREE.MathUtils.lerp(rx,.1,k);ry=THREE.MathUtils.lerp(ry,-.06,k);rz=THREE.MathUtils.lerp(rz,-.28,k);size=1+.3*k;
+    }else{
+      const directionX=spec.x/8+motion.turn*.3;
+      const directionY=-spec.z/3.3+motion.lift*.3;
+      const length=Math.hypot(directionX,directionY)||1;
+      const nx=directionX/length,ny=directionY/length;
+      x=pose.x+nx*27*exit;y=pose.y+(ny*19+motion.lift*2)*exit;z=pose.z+(-ny*9-4)*exit;
+      rx+=motion.turn*.3*exit;ry+=motion.lift*.24*exit;rz+=motion.turn*.4*exit;
+    }
+    group.current.visible=!!anchor||exit<.999;
+    group.current.scale.setScalar(size);
     // Anchors attract the keys back into the layout without locking them together.
     const follow=reducedMotion?1:1-Math.exp(-12*Math.min(delta,.05));
     group.current.position.set(
@@ -97,11 +117,7 @@ function Keycap({spec,index,geometry,material,reflectionMaterial,legend,state,di
       THREE.MathUtils.lerp(group.current.position.y,y,follow),
       THREE.MathUtils.lerp(group.current.position.z,z,follow),
     );
-    group.current.rotation.set(
-      pose.rx+tilt+motion.turn*.3*exit,
-      pose.ry+motion.lift*.24*exit,
-      pose.rz+motion.turn*.4*exit,
-    );
+    group.current.rotation.set(rx,ry,rz);
     if(body.current){
       body.current.scale.set(1,1,spec.depth??1);
       if(opticalMaterial){
@@ -112,10 +128,14 @@ function Keycap({spec,index,geometry,material,reflectionMaterial,legend,state,di
     if(study&&process.env.NODE_ENV!=='production')document.documentElement.dataset.keyResponse=JSON.stringify({amount:s.amount,twist:s.twist,side:opticalMaterial?Array.from(opticalMaterial.uniforms.sideWeights.value):[],crown:opticalMaterial?Array.from(opticalMaterial.uniforms.crownWeights.value):[]});
   });
   const down=(e:ThreeEvent<PointerEvent>)=>{
+    // Clicks meant for projected links or fields never press the glass behind them,
+    // and keys that have left the stage cannot be pressed.
+    if((e.nativeEvent.target as Element|null)?.closest?.('a,button,input,textarea,select,label'))return;
+    if(departure.current>.3&&spec.code!=='Escape')return;
     e.stopPropagation();
     setFloatingAttention(pose,true);
     (e.target as unknown as {setPointerCapture:(id:number)=>void}).setPointerCapture(e.pointerId);
-    dispatch({type:'down',code:spec.code,key:shifting?(spec.shift??spec.key.toUpperCase()):spec.key,source:`pointer:${e.pointerId}`,visualOnly:mobile});
+    dispatch({type:'down',code:spec.code,key:shifting?(spec.shift??spec.key.toUpperCase()):spec.key,source:`pointer:${e.pointerId}`,visualOnly:mobile&&spec.code!==LOGO_CODE&&spec.code!=='Escape'});
   };
   const up=(e:ThreeEvent<PointerEvent>)=>{
     e.stopPropagation();dispatch({type:'up',code:spec.code,source:`pointer:${e.pointerId}`});
@@ -141,14 +161,55 @@ function Keycap({spec,index,geometry,material,reflectionMaterial,legend,state,di
   </group>;
 }
 
+// The map behind ⌘: each known world is the path its letters trace across the
+// glass. Thin white light, drawn letter by letter, following the wandering keys.
+const TRACE_WORDS=COMMANDS.filter(c=>c.featured).map(c=>c.word);
+function Traces({keyboard,visible,preview,reducedMotion}:{keyboard:RefObject<THREE.Group|null>;visible:boolean;preview:string;reducedMotion:boolean}){
+  const {invalidate}=useThree();
+  const traces=useMemo(()=>TRACE_WORDS.map(word=>{
+    const geometry=new THREE.BufferGeometry();
+    geometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array(word.length*3),3));
+    const material=new THREE.LineBasicMaterial({color:'#f6f3fa',transparent:true,opacity:0,depthTest:false,depthWrite:false,toneMapped:false});
+    const line=new THREE.Line(geometry,material);line.renderOrder=20;line.frustumCulled=false;line.raycast=()=>{};
+    return {word,line,drawn:0};
+  }),[]);
+  useEffect(()=>()=>traces.forEach(t=>{t.line.geometry.dispose();(t.line.material as THREE.Material).dispose();}),[traces]);
+  useFrame((_,delta)=>{
+    const group=keyboard.current;
+    if(!group)return;
+    let moving=false;
+    traces.forEach((trace,index)=>{
+      const material=trace.line.material as THREE.LineBasicMaterial;
+      const goal=visible?(preview?(preview===trace.word?.95:.16):.55):0;
+      material.opacity=reducedMotion?goal:THREE.MathUtils.lerp(material.opacity,goal,1-Math.exp(-8*Math.min(delta,.05)));
+      const letters=Array.from(trace.word);
+      const target=visible?letters.length:0;
+      // Staggered per world, then letter by letter.
+      trace.drawn=reducedMotion?target:visible?Math.min(target,trace.drawn+delta*(trace.drawn<0?2:9)):0;
+      if(visible&&trace.drawn===0)trace.drawn=-index*.35;
+      trace.line.geometry.setDrawRange(0,Math.max(0,Math.ceil(trace.drawn)));
+      const position=trace.line.geometry.getAttribute('position') as THREE.BufferAttribute;
+      letters.forEach((letter,i)=>{
+        const key=group.getObjectByName(`Key${letter}`);
+        if(key)position.setXYZ(i,key.position.x,key.position.y+.36,key.position.z);
+      });
+      position.needsUpdate=true;
+      moving||=Math.abs(material.opacity-goal)>.01||(visible&&trace.drawn<target);
+    });
+    if(moving)invalidate();
+  });
+  return <>{traces.map(t=><primitive key={t.word} object={t.line}/>)}</>;
+}
+
 function Keyboard(props:Props) {
   const {nodes}=useGLTF('/models/baked-keycaps.glb');
   const mobile=props.mobile;const layout=KEYBOARD_LAYOUT;
   const opticalNames=desktopOpticalNames;
   const legend=useLegends();const group=useRef<THREE.Group>(null);
-  const {camera,size,gl,scene}=useThree();
+  const {camera,size,gl,scene,invalidate}=useThree();
   const optics=useOpticalAtlases(gl,opticalNames);
-  const departure=useRef(props.away?DEPARTURE_SECONDS:0);
+  const departure=useRef(props.worldMode?DEPARTURE_SECONDS:0);
+  const escAnchor=useRef<THREE.Vector3|null>(null);
   const animationTime=useRef(0);
   const lights=useMemo(()=>[createOpticalLight(),createOpticalLight()],[]);
   const topLight=useRef<THREE.RectAreaLight>(null),frontLight=useRef<THREE.RectAreaLight>(null);
@@ -178,15 +239,20 @@ function Keyboard(props:Props) {
   const rendered=useMemo(()=>study?[{...KEYBOARD_LAYOUT.find(k=>k.code==='KeyA')!,x:0,z:0}]:layout,[study,layout]);
   const poses=useMemo(()=>rendered.map(spec=>createFloatingKey(spec,layout.findIndex(k=>k.code===spec.code))),[rendered,layout]);
   const cameraPose=useRef({distance:0,x:0,initialized:false});
+  // The canvas fills the screen so the projection can; the keyboard keeps the
+  // framing of its CSS frame (a smaller rectangle on phones).
+  const frameRect=screenStore.frame&&screenStore.frame.width>0&&screenStore.frame.height>0?screenStore.frame:{x:0,y:0,width:size.width,height:size.height};
+  const frameKey=`${Math.round(frameRect.x)},${Math.round(frameRect.y)},${Math.round(frameRect.width)},${Math.round(frameRect.height)}`;
   const cameraTarget=useMemo(()=>{
-    const aspect=size.width/size.height;
+    const aspect=frameRect.width/frameRect.height;
     // Keep the optical study's elevation. A dolly changes the framing, not the
     // material or layout: a close crop at rest, the complete keyboard to type.
     const distance=study?3.6:mobile
       ?Math.max((props.editing?23.5:9.6)/aspect,8.8)/(2*Math.tan(THREE.MathUtils.degToRad(34/2)))
       :aspect<1?33/aspect:size.height<600?26:22.5;
     return {distance,x:study?-distance*.26:mobile&&!props.editing?-1.15:0};
-  },[size,study,mobile,props.editing]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[size,study,mobile,props.editing,frameKey]);
   useEffect(()=>{ props.onReady(); return ()=>{Object.values(materials).forEach(m=>m.dispose());legend.dispose();softbox.dispose();reflectionMaterial.dispose();}; },[materials,legend,softbox,reflectionMaterial]); // resource lifetime follows scene
   useEffect(()=>{
     const canvas=gl.domElement;
@@ -204,9 +270,33 @@ function Keyboard(props:Props) {
     c.x=THREE.MathUtils.lerp(c.x,cameraTarget.x,follow);c.initialized=true;
     camera.position.set(c.x,c.distance*.78,c.distance*.63);
     camera.lookAt(study?0:c.x,0,0);camera.updateMatrixWorld();
-    departure.current=props.reducedMotion||props.sleeping?(props.away?DEPARTURE_SECONDS:0):THREE.MathUtils.clamp(departure.current+(props.away?elapsed:-elapsed*1.15),0,DEPARTURE_SECONDS);
+    // Same focal length as the frame, widened to the full canvas, with the
+    // principal point at the frame's centre: the keyboard's framing is unchanged.
+    const live=screenStore.frame&&screenStore.frame.width>0?screenStore.frame:frameRect;
+    const focal=(live.height/2)/Math.tan(THREE.MathUtils.degToRad(17));
+    const cx=live.x+live.width/2,cy=live.y+live.height/2;
+    const fullW=2*Math.max(cx,size.width-cx),fullH=2*Math.max(cy,size.height-cy);
+    const perspective=camera as THREE.PerspectiveCamera;
+    const fov=THREE.MathUtils.radToDeg(2*Math.atan((fullH/2)/focal));
+    if(Math.abs(perspective.fov-fov)>1e-4||!perspective.view||Math.abs(perspective.view.offsetY-(fullH/2-cy))>.5||Math.abs(perspective.view.fullWidth-fullW)>.5){
+      perspective.fov=fov;perspective.aspect=fullW/fullH;
+      perspective.setViewOffset(fullW,fullH,fullW/2-cx,fullH/2-cy,size.width,size.height);
+    }
+    // Keys leave when a world opens and return when it closes.
+    const goal=props.worldMode?DEPARTURE_SECONDS:0;
+    departure.current=props.reducedMotion?goal:THREE.MathUtils.clamp(departure.current+(props.worldMode?elapsed:-elapsed*1.15),0,DEPARTURE_SECONDS);
     group.current.position.y=-.25;
-    if(!props.reducedMotion&&!props.sleeping&&!qa.frozen)animationTime.current+=elapsed;
+    // ESC waits just outside the ice's lower-left corner, a little nearer than it.
+    const d=screenStore.display;
+    if(d&&d.width>0){
+      const depth=camera.position.length()*.8;
+      const px=d.x-d.width*.1,py=d.y+d.height*1.12;
+      const v=(escAnchor.current??=new THREE.Vector3()).set((px/size.width)*2-1,1-(py/size.height)*2,.5).unproject(camera);
+      v.applyMatrix4(camera.matrixWorldInverse);v.multiplyScalar(depth/-v.z).applyMatrix4(camera.matrixWorld);
+      group.current.updateMatrixWorld();group.current.worldToLocal(v);
+    }
+    if(props.worldMode&&!props.reducedMotion&&(performance.now()<screenStore.activeUntil||departure.current<goal))invalidate();
+    if(!props.reducedMotion&&!qa.frozen)animationTime.current+=elapsed;
     const t=props.reducedMotion?0:animationTime.current;
     // One physical studio rig shared by every key. Slow, uneven travel and pauses
     // in the actual emitters produce the changes; materials have no time uniform.
@@ -219,7 +309,7 @@ function Keyboard(props:Props) {
     if(topLight.current){topLight.current.position.copy(lights[0].position);topLight.current.lookAt(0,0,0);}
     if(frontLight.current){frontLight.current.position.copy(lights[1].position);frontLight.current.lookAt(0,0,0);}
     scene.environmentRotation.set(0,0,0);
-    if(!props.sleeping)advanceFloatingKeys(poses,t,delta,props.state.expanding,props.reducedMotion||qa.frozen,mobile?.7:1);
+    advanceFloatingKeys(poses,t,delta,props.state.expanding&&!props.worldMode,props.reducedMotion||qa.frozen,mobile?.7:1);
     const stats=frameStats.current;stats.frames++;stats.total+=delta;
     if(stats.frames>=120){
       const fps=120/stats.total;
@@ -250,9 +340,10 @@ function Keyboard(props:Props) {
     </Environment>
     <color attach="background" args={['#030304']}/>
     <group ref={group} rotation={[0,-.07,-.055]} dispose={null}>
+      <Traces keyboard={group} visible={props.hints} preview={props.preview} reducedMotion={props.reducedMotion}/>
       {rendered.map((spec,index)=><Keycap key={spec.code} spec={spec} index={layout.findIndex(k=>k.code===spec.code)} pose={poses[index]} lights={lights} mobile={mobile} study={study} tilt={qa.tilt}
         geometry={(nodes[study?'Keycap_1_right':variantFor(spec)] as THREE.Mesh).geometry}
-        material={materials[study?'Keycap_1_right':variantFor(spec)]} optics={optics[study?'Keycap_1_right':variantFor(spec)]} reflectionMaterial={reflectionMaterial} legend={legend} state={props.state} dispatch={props.dispatch} preview={props.preview} reducedMotion={props.reducedMotion} departure={departure} animationTime={animationTime}/>)}
+        material={materials[study?'Keycap_1_right':variantFor(spec)]} optics={optics[study?'Keycap_1_right':variantFor(spec)]} reflectionMaterial={reflectionMaterial} legend={legend} state={props.state} dispatch={props.dispatch} preview={props.preview} reducedMotion={props.reducedMotion} departure={departure} escAnchor={escAnchor} animationTime={animationTime}/>)}
     </group>
   </>;
 }
@@ -260,10 +351,13 @@ function Keyboard(props:Props) {
 export default function KeyboardScene(props:Props) {
   const [visible,setVisible]=useState(true);
   useEffect(()=>{const change=()=>setVisible(!document.hidden);change();document.addEventListener('visibilitychange',change);return()=>document.removeEventListener('visibilitychange',change);},[]);
-  return <Canvas camera={{position:[0,14,11],fov:34,near:.1,far:100}} dpr={[1,1.6]} frameloop={props.sleeping||props.reducedMotion||!visible?'demand':'always'}
+  return <Canvas camera={{position:[0,14,11],fov:34,near:.1,far:100}} dpr={[1,1.6]} frameloop={props.worldMode||props.reducedMotion||!visible?'demand':'always'}
+    eventSource={props.eventSource as RefObject<HTMLElement>} eventPrefix="client"
     gl={{antialias:true,alpha:true,powerPreference:'high-performance'}}
     onCreated={({gl})=>{gl.toneMapping=THREE.ACESFilmicToneMapping;gl.toneMappingExposure=1.2;}}
     fallback={<span className="webgl-fallback">TYPE YOUR WORLD.</span>}>
-    <Suspense fallback={null}><Keyboard {...props} sleeping={props.sleeping||!visible}/></Suspense>
+    <ProjectionScreen reducedMotion={props.reducedMotion}/>
+    <IceDisplay reducedMotion={props.reducedMotion}/>
+    <Suspense fallback={null}><Keyboard {...props}/></Suspense>
   </Canvas>;
 }

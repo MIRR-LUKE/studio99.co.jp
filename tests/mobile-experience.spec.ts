@@ -1,11 +1,12 @@
 import {test,expect} from '@playwright/test';
+test.skip(true,'The keyboard hero is paused (2026-11-06); see KeyboardExperience.tsx.');
 
 test('mobile uses the same US keys; native ABOUT animates letters and departs before navigation',async({browser})=>{
   const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
   const page=await context.newPage();await page.goto('/');
   const scene=page.getByTestId('keyboard-scene');
   await expect(scene).toHaveAttribute('data-layout','us-qwerty');
-  await expect(scene).toHaveAttribute('data-key-count','76');
+  await expect(scene).toHaveAttribute('data-key-count','77');
   await expect(page.locator('html')).toHaveAttribute('data-optical-atlas-count','14',{timeout:20000});
   await page.getByRole('button',{name:'Focus command input'}).tap();
   const input=page.getByLabel('Your world',{exact:true});await expect(input).toBeFocused();
@@ -16,7 +17,7 @@ test('mobile uses the same US keys; native ABOUT animates letters and departs be
   await expect(scene).toHaveAttribute('data-motion','leaving');
   await expect(page.locator('.experience')).not.toHaveClass(/has-native-input/);
   await expect(page).toHaveURL(/\/about$/);
-  await page.getByRole('button',{name:'Close world'}).click();await expect(page).toHaveURL(/\/$/);
+  await page.getByRole('button',{name:'Close world'}).focus();await page.keyboard.press('Enter');await expect(page).toHaveURL(/\/$/);
   await expect(scene).toHaveAttribute('data-view','mobile-close');
   await context.close();
 });

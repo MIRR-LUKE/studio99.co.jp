@@ -1,5 +1,6 @@
 export type KeySpec = { code: string; label: string; key: string; shift?: string; u: number; x: number; z: number; small?: boolean; depth?:number };
 type Item = [string, string, string?, number?, string?];
+export const LOGO_CODE = 'Studio99';
 const keys: KeySpec[] = [];
 function row(z: number, items: Item[], start = 0) {
   let x = start;
@@ -10,6 +11,8 @@ function row(z: number, items: Item[], start = 0) {
 }
 row(-2.85, [['Escape','ESC','Escape']], 0);
 for (let i=0;i<12;i++) row(-2.85, [[`F${i+1}`,`F${i+1}`,`F${i+1}`]], 2+i+(i>=4?.3:0)+(i>=8?.3:0));
+// The brand is a key, not a header: it sits where a Mac keeps its power key.
+row(-2.85, [[LOGO_CODE,'Studio99',LOGO_CODE]], 14.75);
 row(-1.55, [
   ['Backquote','~\n`','`',1,'~'], ...'1234567890'.split('').map((n,i):Item=>[`Digit${n}`,`${'!@#$%^&*()'[i]}\n${n}`,n,1,'!@#$%^&*()'[i]]),
   ['Minus','_\n-','-',1,'_'],['Equal','+\n=','=',1,'+'],['Backspace','BACKSPACE','Backspace',2],

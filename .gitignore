@@ -12,6 +12,11 @@ playwright-report/
 assets/blender/bake-cache/
 assets/blender/optical-motion/
 assets/blender/spectral-passes/
+# World key: intermediate frames and passes (public/models/world-key is tracked).
+assets/blender/world-key/frames/
+assets/blender/world-key/*.exr
+assets/blender/world-key/*.png
+assets/blender/world-key/*.log
 __pycache__/
 *.pyc
 docs/qa/**/*.log

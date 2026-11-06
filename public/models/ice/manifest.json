@@ -1,0 +1,15 @@
+{
+  "revision": 1,
+  "expand": [
+    0.17,
+    0.155
+  ],
+  "shapes": {
+    "landscape": {
+      "frameAspect": 1.7777777777777777
+    },
+    "portrait": {
+      "frameAspect": 0.6666666666666666
+    }
+  }
+}

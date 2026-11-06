@@ -24,19 +24,9 @@ npm start
 
 ## 操作
 
-| 入力 | 動作 |
-| --- | --- |
-| ABOUT / WORKS / CONTACT / RUBICON / BI / ON | Enterで確定。キーが散開してからページが開く |
-| 未知の言葉 + Enter | UNKNOWN WORLD |
-| Esc | 入力・ヒント・コンテンツを閉じ、キーが再集合。散開途中でもキャンセル可能 |
-| ⌘ / Ctrl を保持 | KNOWN WORLDS |
-| 3Dの⌘・Ctrlをクリック / メニュー / ? | ヒントの表示を切り替え |
-| 空入力でSpaceを保持 | キー間隔を広げる |
-| Shiftを保持 | 微細な構造線を重ねる |
+Heroは紙の灰色のポスターです。中央に「world」と刻まれたガラスのキーが1個だけ浮かび、カーソルの方へわずかに傾き、押すと沈みます。キーはキーボードと同じBlenderの形と光学データ（白い光が動く結晶のガラス）を使っています。四隅の文字から About / Works / Contact へ移動します。動きを減らす設定では静止します。3Dが使えない環境では、キーの位置に「world」の文字を表示します。
 
-幅700px以下も同じ76キーのUS配列です。最初は大きく寄った構図で、左右をクロップ。ガラスをタップすると弾みますが、この状態では文字を入力しません。`TYPE TO EXPLORE` / `TAP TO TYPE` をタップすると端末の標準キーボードが開き、3Dのカメラが引いて全体を表示します。入力欄と3Dは `visualViewport` に合わせて配置し、入力した文字に対応するUSキーが弾みます。Enterでキーボードを閉じ、ガラスが散開してからページが開きます。閉じる操作や画面幅変更でも入力途中の言葉を保持します。
-
-日本語IMEの変換中はコマンドを確定せず、変換完了後の入力を扱います。OS標準キーボードの言語・配列は利用者の端末設定に従います。3Dが使えない環境もHTMLナビゲーションと入力欄を利用できます。
+キーボード、文字入力、氷のディスプレイの体験は一時停止中です（`src/components/KeyboardExperience.tsx` にそのまま保管）。
 
 ## 実装
 
@@ -49,7 +39,18 @@ npm start
 - `src/lib/optical-transport.ts`: Blenderの光源位置、入射方向と視点による光学サンプルの選択
 - `src/lib/key-response.ts`: 押下・ホバーの圧縮とねじれのばね
 - `src/components/OpticalMotion.ts`: 光学合成、Blender表示変換、面光源の反射、角度依存の薄膜虹彩
-- `src/components/Experience.tsx`: 入力イベント、IME・ショートカット保護、遷移、ヒント
+- `src/components/Experience.tsx`: ポスターの枠組み（四隅の文字、見出し、円と線）とページ
+- `src/components/WorldKey.tsx`: 浮かぶ world キー。ブラウザでリアルタイムに光線追跡する（形状はBlenderのキー、内部は同じ断面からの距離場、3つの屈折率、全反射、AgX）。後ろの大きな文字はDOMから描いて紙面として置き、ガラス越しに屈折して見える
+- `src/lib/world-key-studio.ts`: Cyclesと同じスタジオ（Blender座標からの変換、カメラ、紙の校正値、光の移動、姿勢、断面）
+- `src/lib/key-physics.ts`: 押した点に力がかかる剛体＋柔らかいゼリーのモード（つぶれ・揺れ・ねじれ・へこみ）。シェーダーの変形と同じ形の関数
+- `scripts/render-world-key.py` / `scripts/package-world-key.mjs`: 平らな上面のキー形状（glb）とCyclesの静止画（JavaScriptなし・WebGLなしの表示、リアルタイム版の比較用）を書き出す（`npm run assets:world-key`、約1分）
+- `src/components/KeyboardExperience.tsx`: 一時停止中のキーボードの世界（入力、IME保護、透明なHTML、氷のディスプレイ）
+- `src/lib/world.ts`: URLから今いる世界を決める。押されたまま／立ち上がるキー、未知の言葉の安全なURL
+- `src/components/ProjectionScreen.tsx`: Heroの闇に浮かぶ光（打った言葉、候補、⌘の一覧、署名、カーソル）。端の減光とにじみ
+- `src/components/IceDisplay.tsx`: 氷のディスプレイ。Cyclesの焼き込み画像を枠に合わせて置き、ページの光と凍る演出を重ねる
+- `scripts/bake-ice-display.py`: ディスプレイの見た目をCyclesで焼く（横長・縦長）。`scripts/build-ice-display-study.py` は見た目の検討用の静止画、`scripts/render-display-content.mjs` はその中身
+- `src/lib/screen-paint.ts` / `src/components/useProjection.ts`: 透明なHTMLの行の位置と書体をCanvasに写し、スクリーンへ。スクロール・入力・フォーカスに追従
+- `src/lib/screen-store.ts`: HTML側と3D側で共有する、スクリーンの状態
 - `src/app/[...world]/page.tsx`: 直接アクセスできる、静的生成されたHTMLコンテンツ
 - `src/lib/content.ts`: 仮の会社・作品原稿とメールアドレス
 
@@ -107,15 +108,17 @@ Webは**実際の3D形状に、固定カメラ用の光学計算結果を組み�
 
 押下は硬めの圧縮ばねと、減衰の遅いねじればねの2成分です。約1秒の細かな余韻を残し、65msの最小押下で短いタップも取りこぼしません。ホバーは小さな一度の衝撃だけで、拡大・明るさ変更・浮き上がったままの状態はありません。最大1/120秒の積分ステップで30/60/120Hzの差を抑えています。
 
-形状と光学アトラスは共有し、文字は1枚のテクスチャを使います。スマホもPCと同じ14アトラス（8.39 MiB、GPU概算93.60 MiB）を共有し、品質を維持します。カメラから外れるキーは描画時にカリングされます。DPRは最大1.6。コンテンツ表示中・タブ非表示時には連続描画を止めます。`prefers-reduced-motion` では浮遊・光源移動・弾みを止め、遷移の待ち時間を省き、文字カーソルの点滅も止めます。
+氷のディスプレイは常にカメラに正対し、透明なHTMLの枠（`.display-frame`）の周りに置かれるので、カメラから見た姿は形ごとに1つです。その姿を `scripts/bake-ice-display.py` がCyclesで焼き（3屈折率の分光、厚いテーパーの壁、白い面光源）、ブラウザはその画像にページの光と凍る演出を重ねます。CSSで枠の比率を変えたら焼き直してください。
+
+形状と光学アトラスは共有し、文字は1枚のテクスチャを使います。スマホもPCと同じ14アトラス（8.39 MiB、GPU概算93.60 MiB）を共有し、品質を維持します。カメラから外れるキーは描画時にカリングされます。DPRは最大1.6。世界の中では読んでいる間は描画せず、スクロール・入力・ポインタ操作のあいだだけ描きます。タブ非表示時は止めます。`prefers-reduced-motion` では浮遊・光源移動・弾みを止め、遷移の待ち時間を省き、文字カーソルの点滅も止めます。
 
 動く光の編集用 `.blend` は単一IORのプレビューです。Webの2光源と同じ移動式を30秒分保存しています。Webと同じ3屈折率の合成結果は `npm run assets:motion` で再生成します。光源・形状・計算条件を変える際は `assets/blender/optical-motion/Keycap_*` のキャッシュを別名で退避してから再実行してください。旧固定光のキャッシュは `00.revision3.npy` に保存しています。
 
-`node scripts/capture-angle-response.mjs` は静止・光源だけ回転・キーだけ傾斜の比較を保存し、静止条件の画素一致と角度変更時の差を検査します。開発時のみ `/?material&freeze=1&light=1.8&tilt=.2` で同じ条件を再現できます。ベイク範囲外の角度では情報が不足するため、自由な照明変更・カメラ回転にはベイクの追加が必要です。`tests/optical-response.spec.ts` は76キーと光源を60秒分動かし、毎フレームの光量重みが急に切り替わらないことを検査します。
+`node scripts/capture-angle-response.mjs` は静止・光源だけ回転・キーだけ傾斜の比較を保存し、静止条件の画素一致と角度変更時の差を検査します。開発時のみ `/?material&freeze=1&light=1.8&tilt=.2` で同じ条件を再現できます。ベイク範囲外の角度では情報が不足するため、自由な照明変更・カメラ回転にはベイクの追加が必要です。`tests/optical-response.spec.ts` は77キー（ロゴキーを含む）と光源を60秒分動かし、毎フレームの光量重みが急に切り替わらないことを検査します。
 
 ## 検証と制作記録
 
-機能テストと見た目の評価は別に扱います。結果は `docs/qa/verification.md`。最新の動きは `npm run qa:motion` で撮影し、`docs/qa/motion/keyboard-motion.webm` に保存します。デスクトップ静止画は同フォルダの `floating-a.png`。最新のスマホ構図は `docs/qa/responsive/hero-390.png`、入力中は `native-input-390.png`（OSキーボード自体は表示せず、可視領域の縮小を再現）。初期の材質試作画像も `docs/qa/` に残しています。
+機能テストと見た目の評価は別に扱います。氷のディスプレイとナビゲーションの静止画は `docs/qa/ice-display/`、Cyclesの検討画は `docs/qa/display-study/`。結果は `docs/qa/verification.md`。最新の動きは `npm run qa:motion` で撮影し、`docs/qa/motion/keyboard-motion.webm` に保存します。デスクトップ静止画は同フォルダの `floating-a.png`。最新のスマホ構図は `docs/qa/responsive/hero-390.png`、入力中は `native-input-390.png`（OSキーボード自体は表示せず、可視領域の縮小を再現）。初期の材質試作画像も `docs/qa/` に残しています。
 
 文字フォントのDM Sansはローカル配信。ライセンスは `public/fonts/OFL-DM-Sans.txt`。
 
